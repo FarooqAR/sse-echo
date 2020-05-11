@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👨‍🦲 SSE Echo</title>
+</head>
+<body>
+    <div class="content">
+        <h1>👨‍🦲 SSE Echo | Server-Sent events Playground</h1>
+        <p>👉 Give me the whole event-stream and I will send it back to you, event by event 😉</p>
+        <p>Make sure your event-stream follows the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#Event_stream_format" target="_blank">standard format</a></p>
+        <div class="input-stream">
+            <textarea id="input-stream" style="width: 600px; height: 300px;">data: Hello world 🌎😀
+
+data: Welcome to SSE Demo 👏👏
+
+id: 1
+data: This one will set an id 1
+
+data: {"title": "This one is json!"}
+
+data: {"title": "This one is json too!", "hello": {"title": "It has nested json as well!"}}
+
+event: close
+data: Send event: close at the end like here to close the stream.
+
+</textarea>
+        </div>
+        <div class="controls" style="margin:1em 0">
+            Minimum delay (in seconds) between each event:
+            <input type="number" max="10" min="0" value="0" id="input-delay">
+            <button id="btn-connect">Connect!</button>
+            <button id="btn-close">Close!</button>
+            <div style="opacity:0.7" id="notice"></div style="opacity:0.7">
+        </div>
+        <div class="description">
+            <p>Click <i>Connect</i> to start the event source connection.</p>
+            <p>Click <i>Close</i> to forcibly close the connection.</p>
+            <p>By default, all the events given above are dispatched instantly. You can change that by setting a delay (0s by default, max is 10s).</p>
+            <p>Open DevTools network monitor and select the related request to see the incoming events/messages.</p>
+        </div>
+    </div>
+
+    <script>
+        const btnConnect = document.getElementById("btn-connect");
+        const btnClose = document.getElementById("btn-close");
+        const inputStream = document.getElementById("input-stream");
+        const inputDelay = document.getElementById("input-delay");
+        const notice = document.getElementById("notice");
+
+        let es = null;
+
+        btnConnect.addEventListener('click', function () {
+            if (es) {
+                es.close();
+            }
+            let formattedStream = inputStream.value.trim() + "\n\n";
+            if (formattedStream.length > 500) {
+                notice.innerText = "I am sorry :( Cannot allow this large stream. Max allowed length is 500.";
+                return;
+            }
+            notice.innerText = "Connecting ...";
+            formattedStream = encodeURIComponent(formattedStream);
+            es = new EventSource(`https://sse-echo.herokuapp.com/events?delay=${inputDelay.value}&data=${formattedStream}`);
+            es.onmessage = function (e) {
+                console.log(e);
+            }
+            es.onopen = function () {
+                notice.innerText = "Connected!";
+            }
+            es.onerror = function (e) {
+                if (e.target.readyState === 2) {
+                    notice.innerText = "Oops! There was an error. Connection closed.";
+                }
+                else {
+                    notice.innerText = "Oops! There was an error. Reconnecting ...";
+                }
+            }
+            es.addEventListener('close', function (e) {
+                notice.innerText = "";
+                console.log(e);
+                es.close();
+            })
+        });
+
+        btnClose.addEventListener('click', function () {
+            if (es) {
+                notice.innerText = "";
+                es.close();
+            }
+        })
+
+    </script>
+</body>
+</html>
